@@ -94,6 +94,10 @@ export function printSuccess(message: string): void {
   console.log(`  ${chalk.green('✔')} ${message}`);
 }
 
+export function printInfo(message: string): void {
+  console.log(`  ${chalk.cyan('ℹ')} ${message}`);
+}
+
 export async function promptUser(): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,

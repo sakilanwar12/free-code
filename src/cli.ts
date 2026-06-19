@@ -13,12 +13,8 @@ export function runCLI(): void {
   program
     .name('freepilot')
     .description('Autonomous AI coding agent for the terminal')
-    .version(pkg.version);
-
-  program
-    .command('chat')
-    .description('Start an interactive coding session')
-    .option('-m, --model <model>', 'AI model (default: deepseek/deepseek-chat-v3:free). Options: qwen/qwen-2.5-coder-32b-instruct:free, deepseek/deepseek-r1:free, meta-llama/llama-3.3-70b-instruct:free, openrouter/free')
+    .version(pkg.version)
+    .option('-m, --model <model>', 'AI model to use')
     .option('-p, --provider <provider>', 'AI provider: openrouter (default), ollama, deepseek, openai')
     .option('-y, --yes', 'Auto-accept all file changes (non-interactive mode)')
     .action(async (options) => {
@@ -77,7 +73,8 @@ FREEPILOT_MODEL=gpt-4o-mini
           return;
         }
         content += `OPENROUTER_API_KEY=${apiKey.trim()}
-FREEPILOT_MODEL=google/gemini-2.0-flash-exp:free
+# Recommended models: deepseek/deepseek-chat-v3:free, qwen/qwen-2.5-coder-32b-instruct:free, deepseek/deepseek-r1:free
+FREEPILOT_MODEL=deepseek/deepseek-chat-v3:free
 `;
       } else if (provider === 'deepseek') {
         const { createInterface } = await import('readline');
