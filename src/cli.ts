@@ -74,7 +74,7 @@ FREEPILOT_MODEL=gpt-4o-mini
         }
         content += `OPENROUTER_API_KEY=${apiKey.trim()}
 # Recommended models: deepseek/deepseek-chat-v3:free, qwen/qwen-2.5-coder-32b-instruct:free, deepseek/deepseek-r1:free
-FREEPILOT_MODEL=deepseek/deepseek-chat-v3:free
+FREEPILOT_MODEL=deepseek/deepseek-v4-flash
 `;
       } else if (provider === 'deepseek') {
         const { createInterface } = await import('readline');

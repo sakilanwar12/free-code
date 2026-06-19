@@ -8,14 +8,15 @@ export interface ModelEntry {
 
 export const MODEL_LIST: ModelEntry[] = [
   // ===== OpenRouter Free Models =====
-  { id: 'deepseek/deepseek-chat-v3:free', name: 'DeepSeek V3', provider: 'openrouter', paid: false, description: 'Fast, good reasoning, best for coding agents' },
+  { id: 'openrouter/free', name: 'Auto Router', provider: 'openrouter', paid: false, description: 'Auto-selects an available free model' },
+  { id: 'deepseek/deepseek-v4-flash', name: 'DeepSeek V4 Flash', provider: 'openrouter', paid: false, description: 'Fast, cheap ($0.09/M), best default for coding' },
   { id: 'deepseek/deepseek-r1:free', name: 'DeepSeek R1', provider: 'openrouter', paid: false, description: 'Strong reasoning, step-by-step thinking' },
   { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen Coder 2.5', provider: 'openrouter', paid: false, description: 'Best for code generation & multi-file refactor' },
   { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B', provider: 'openrouter', paid: false, description: 'Stable chat, general coding, good fallback' },
   { id: 'google/gemma-3-27b-it:free', name: 'Gemma 3 27B', provider: 'openrouter', paid: false, description: 'Fast, lightweight, simple tasks' },
-  { id: 'openrouter/free', name: 'Auto Router', provider: 'openrouter', paid: false, description: 'Auto-selects best free model' },
 
   // ===== OpenRouter Paid Models =====
+  { id: 'deepseek/deepseek-chat-v3', name: 'DeepSeek V3', provider: 'openrouter', paid: true, description: 'Fast coding model via OpenRouter credits' },
   { id: 'anthropic/claude-3.5-sonnet', name: 'Claude Sonnet 3.5', provider: 'openrouter', paid: true, description: 'Best overall coding (requires OpenRouter key with credits)' },
   { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'openrouter', paid: true, description: 'OpenAI via OpenRouter (requires credits)' },
   { id: 'openai/o3-mini', name: 'o3-mini', provider: 'openrouter', paid: true, description: 'Fast reasoning model via OpenRouter' },

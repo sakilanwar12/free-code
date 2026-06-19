@@ -1,5 +1,5 @@
 {
-  "name": "freepilot",
+  "name": "freepilot-cli",
   "version": "1.0.0",
   "description": "Autonomous AI coding agent for the terminal",
   "type": "module",
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "prepare": "pnpm run build && npm link",
     "dev": "tsup --watch",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit"

@@ -32,7 +32,7 @@ const DEFAULT_MODELS: Record<Provider, string> = {
   ollama: 'codellama',
   deepseek: 'deepseek-chat',
   openai: 'gpt-4o-mini',
-  openrouter: 'deepseek/deepseek-chat-v3:free',
+  openrouter: 'deepseek/deepseek-v4-flash',
 };
 
 function loadEnvFile(): void {
