@@ -8,7 +8,7 @@ import { buildSystemPrompt } from './system.js';
 import { toolDefinitions, executeToolCall } from './ai/tools.js';
 import { MODEL_LIST, getModelById } from './models.js';
 import { isImageFile, imageToBase64 } from './utils/images.js';
-import { printBanner, printHelp, printUserMessage, printAssistantHeader, printAssistantFooter, renderAndWriteStreaming, printToolCall, printToolResult, printError, printSuccess, printInfo, clearLine, promptUser, closePrompt, setDarkBackground, resetBackground } from './ui/chat.js';
+import { printBanner, printHelp, printUserMessage, printAssistantHeader, printAssistantFooter, renderAndWriteStreaming, printToolCall, printToolResult, printError, printSuccess, printInfo, clearLine, promptUser, closePrompt, setDarkBackground, resetBackground, startThinkingSpinner, stopThinkingSpinner } from './ui/chat.js';
 import { type PromptResult } from './ui/chat.js';
 import { estimateTokens, formatCost } from './utils/tokens.js';
 import { isGitRepository } from './tools/git.js';
@@ -78,28 +78,82 @@ async function switchModel(config: Config, modelId: string): Promise<boolean> {
 }
 
 function printModelList(): void {
-  const groups: { title: string; models: typeof MODEL_LIST; color: (s: string) => string }[] = [
-    { title: 'OpenRouter Free', color: chalk.green, models: MODEL_LIST.filter(m => m.provider === 'openrouter' && !m.paid) },
-    { title: 'OpenRouter Paid', color: chalk.yellow, models: MODEL_LIST.filter(m => m.provider === 'openrouter' && m.paid) },
-    { title: 'DeepSeek', color: chalk.cyan, models: MODEL_LIST.filter(m => m.provider === 'deepseek') },
-    { title: 'OpenAI', color: chalk.magenta, models: MODEL_LIST.filter(m => m.provider === 'openai') },
-    { title: 'Ollama Local', color: chalk.blue, models: MODEL_LIST.filter(m => m.provider === 'ollama') },
+  const MUTED = chalk.hex('#64748b');
+  const DIM = chalk.hex('#475569');
+
+  const groups: { title: string; icon: string; models: typeof MODEL_LIST; color: (s: string) => string }[] = [
+    { title: 'OpenRouter Free', icon: '🌐', color: chalk.hex('#34d399'), models: MODEL_LIST.filter(m => m.provider === 'openrouter' && !m.paid) },
+    { title: 'OpenRouter Paid', icon: '💳', color: chalk.hex('#fbbf24'), models: MODEL_LIST.filter(m => m.provider === 'openrouter' && m.paid) },
+    { title: 'DeepSeek', icon: '🐋', color: chalk.hex('#38bdf8'), models: MODEL_LIST.filter(m => m.provider === 'deepseek') },
+    { title: 'OpenAI', icon: '🤖', color: chalk.hex('#a78bfa'), models: MODEL_LIST.filter(m => m.provider === 'openai') },
+    { title: 'Ollama Local', icon: '🦙', color: chalk.hex('#818cf8'), models: MODEL_LIST.filter(m => m.provider === 'ollama') },
   ];
 
-  console.log(`\n  ${chalk.bold('Available Models')}`);
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  const cols = process.stdout.columns || 80;
+  const W = Math.max(40, Math.min(90, cols - 6));
+  const innerW = W - 2;
+  const lines: string[] = [];
+
+  const bg = chalk.bgHex('#1e293b'); // Slate 800
+  const borderClr = chalk.hex('#475569'); // Slate 600
+  const leftBorderClr = chalk.hex('#38bdf8'); // Sky blue
+
+  const boxRow = (content: string) => {
+    const visLen = stripAnsi(content).length;
+    const padding = Math.max(0, innerW - visLen);
+    return leftBorderClr('│') + bg(content + ' '.repeat(padding)) + borderClr('│');
+  };
+
+  // Top border
+  lines.push(leftBorderClr('┌') + borderClr('─'.repeat(innerW)) + borderClr('┐'));
+
+  // Header
+  lines.push(boxRow(`  ${chalk.bold.hex('#e2e8f0')('Available Models')}`));
+  lines.push(boxRow(`  ${borderClr('─'.repeat(innerW - 4))}`));
+
   let idx = 1;
+  let firstGroup = true;
 
   for (const group of groups) {
     if (group.models.length === 0) continue;
-    console.log(`\n  ${group.color(chalk.bold(group.title))}`);
+    if (!firstGroup) {
+      lines.push(boxRow(''));
+    }
+    firstGroup = false;
+
+    lines.push(boxRow(`  ${group.icon} ${group.color(chalk.bold(group.title))}`));
     for (const m of group.models) {
-      const icon = m.paid ? chalk.yellow('$') : chalk.green('✓');
-      console.log(`  ${chalk.dim(`${String(idx).padStart(2)}.`)} ${icon} ${chalk.bold(m.name.padEnd(22))} ${chalk.dim(m.description)}`);
+      const icon = m.paid ? chalk.hex('#fbbf24')('$') : chalk.hex('#34d399')('✓');
+      const num = DIM(`${String(idx).padStart(2)}.`);
+      
+      let displayDesc = m.description;
+      const baseLen = stripAnsi(`    ${num} ${icon} ${m.name.padEnd(24)} `).length;
+      const maxDescLen = (innerW - 4) - baseLen;
+      if (maxDescLen < displayDesc.length) {
+        displayDesc = displayDesc.slice(0, Math.max(5, maxDescLen - 3)) + '...';
+      }
+
+      lines.push(boxRow(`    ${num} ${icon} ${chalk.bold.hex('#e2e8f0')(m.name.padEnd(22))} ${MUTED(displayDesc)}`));
       idx++;
     }
   }
-  console.log(`\n  ${chalk.dim('Type')} ${chalk.cyan('/model <number>')} ${chalk.dim('to switch, or')} ${chalk.cyan('/model <name>')} ${chalk.dim('for any model ID')}`);
+
+  // Footer inside the box
+  lines.push(boxRow(`  ${borderClr('─'.repeat(innerW - 4))}`));
+  const bottomText = `  ${MUTED('Use')} ${chalk.hex('#818cf8')('/model <number>')} ${MUTED('or')} ${chalk.hex('#818cf8')('/model <id>')} ${MUTED('to switch')}`;
+  lines.push(boxRow(bottomText));
+
+  // Bottom border
+  lines.push(leftBorderClr('└') + borderClr('─'.repeat(innerW)) + borderClr('┘'));
+
+  console.log();
+  for (const line of lines) {
+    console.log('  ' + line);
+  }
+}
+
+function stripAnsi(str: string): string {
+  return str.replace(/\x1b\[[0-9;?]*[A-Za-z~]/g, '');
 }
 
 async function* streamCompletion(
@@ -197,9 +251,17 @@ export async function startChat(config: Config): Promise<void> {
           messages.push({ role: 'system', content: buildSystemPrompt(context) });
           printSuccess('Conversation history cleared.');
           continue;
-        case '/tokens':
-          console.log(`\n  ${chalk.cyan('ℹ')} Input: ~${totalInputTokens} | Output: ~${totalOutputTokens} | Cost: ${formatCost(totalInputTokens, totalOutputTokens, config.model)}`);
+        case '/tokens': {
+          const ACCENT = chalk.hex('#38bdf8');
+          const MUTED = chalk.hex('#64748b');
+          console.log();
+          console.log(`  ${ACCENT('╭─')} ${chalk.bold.hex('#e2e8f0')('Token Usage')}`);
+          console.log(`  ${ACCENT('│')}  📥 ${MUTED('Input:')}  ${chalk.hex('#34d399')(`~${totalInputTokens}`)} tokens`);
+          console.log(`  ${ACCENT('│')}  📤 ${MUTED('Output:')} ${chalk.hex('#818cf8')(`~${totalOutputTokens}`)} tokens`);
+          console.log(`  ${ACCENT('│')}  💰 ${MUTED('Cost:')}   ${chalk.hex('#fbbf24')(formatCost(totalInputTokens, totalOutputTokens, config.model))}`);
+          console.log(`  ${ACCENT('╰─')}${chalk.hex('#475569')('─'.repeat(30))}`);
           continue;
+        }
         case '/model':
           if (parts[1]) {
             const num = parseInt(parts[1]);
@@ -249,7 +311,7 @@ export async function startChat(config: Config): Promise<void> {
     while (toolCallDepth < MAX_TOOL_DEPTH) {
       toolCallDepth++;
 
-      const spinnerTimer = setInterval(() => { process.stdout.write(`\r${chalk.dim('  \u23F3 Thinking...')}`); }, 150);
+      const spinnerTimer = startThinkingSpinner();
       let gotResponse = false;
 
       try {
@@ -260,7 +322,7 @@ export async function startChat(config: Config): Promise<void> {
         let startedStreaming = false;
 
         for await (const event of streamGen) {
-          if (!gotResponse) { clearInterval(spinnerTimer); clearLine(); gotResponse = true; }
+          if (!gotResponse) { stopThinkingSpinner(spinnerTimer); clearLine(); gotResponse = true; }
           switch (event.type) {
             case 'content':
               if (!startedStreaming) { startedStreaming = true; printAssistantHeader(); }
@@ -277,7 +339,7 @@ export async function startChat(config: Config): Promise<void> {
           }
         }
 
-        if (!gotResponse) { clearInterval(spinnerTimer); clearLine(); gotResponse = true; }
+        if (!gotResponse) { stopThinkingSpinner(spinnerTimer); clearLine(); gotResponse = true; }
         if (error) { printError(error); break; }
 
         if (toolCalls && toolCalls.length > 0) {
@@ -311,18 +373,18 @@ export async function startChat(config: Config): Promise<void> {
 
         if (isGitRepository()) {
           const status = getGitStatusSummary();
-          if (status) console.log(`  ${chalk.dim('Git:')} ${chalk.yellow(status)}`);
+          if (status) console.log(`  ${chalk.hex('#475569')('⎇')} ${chalk.hex('#64748b')('Git:')} ${chalk.hex('#fbbf24')(status)}`);
         }
         break;
       } catch (error: any) {
-        clearInterval(spinnerTimer);
+        stopThinkingSpinner(spinnerTimer);
         clearLine();
         printError('Request failed', error.message);
         break;
       }
     }
 
-    if (toolCallDepth >= MAX_TOOL_DEPTH) console.log(`  ${chalk.yellow('\u26A0')} Warning: Reached maximum tool call depth.`);
+    if (toolCallDepth >= MAX_TOOL_DEPTH) console.log(`  ${chalk.hex('#fbbf24')('⚠')} ${chalk.hex('#64748b')('Warning: Reached maximum tool call depth.')}`);
 
     const MAX_HISTORY = 60;
     if (messages.length > MAX_HISTORY) {
